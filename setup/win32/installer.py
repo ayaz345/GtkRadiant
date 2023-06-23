@@ -28,7 +28,7 @@ from xml.dom.minidom import parse
 import msi
 
 cwd = os.getcwd()
-print("cwd=" + cwd)
+print(f"cwd={cwd}")
 
 
 def format_guid(guid):
@@ -129,14 +129,17 @@ class MSIPackage:
     self.createPackage(packageFile)
     
   def addDirectory(self, directoryName, parentKey, directory):
-    if(not directory.has_key(directoryName)):
-      directoryKey = "d" + str(self.directoryCount)
+    if (not directory.has_key(directoryName)):
+      directoryKey = f"d{str(self.directoryCount)}"
       self.directoryCount = self.directoryCount + 1
-      print("adding msi directory " + directoryKey + " parent=" + parentKey + " name=" + directoryName)
-      self.directoryTable.append(Directory(directoryKey, parentKey, directoryKey + "|" + directoryName))
+      print(
+          f"adding msi directory {directoryKey} parent={parentKey} name={directoryName}"
+      )
+      self.directoryTable.append(
+          Directory(directoryKey, parentKey, f"{directoryKey}|{directoryName}"))
       directory[directoryName] = (directoryKey, {})
     else:
-      print("ignored duplicate directory " + directoryName)
+      print(f"ignored duplicate directory {directoryName}")
     return directory[directoryName]
     
   def parseComponentTree(self, treeElement, parent, directory, directoryPath, component):
@@ -145,25 +148,24 @@ class MSIPackage:
       if (childElement.nodeName == "file"):
         fileName = childElement.getAttribute("name")
         filePath = os.path.join(directoryPath, fileName)
-        if(fileName != "" and os.path.exists(filePath)):
-          print("found file " + filePath)
-          file = (fileName, os.path.getsize(filePath), filePath)
-          files.append(file)
-        else:
-          raise Exception("file not found " + filePath)
+        if fileName == "" or not os.path.exists(filePath):
+          raise Exception(f"file not found {filePath}")
 
+        print(f"found file {filePath}")
+        file = (fileName, os.path.getsize(filePath), filePath)
+        files.append(file)
       if (childElement.nodeName == "dir"):
         directoryName = childElement.getAttribute("name")
-        print("found directory " + directoryName)
-        directoryPair = self.addDirectory(directoryName, parent, directory)   
+        print(f"found directory {directoryName}")
+        directoryPair = self.addDirectory(directoryName, parent, directory)
         self.parseComponentTree(childElement, directoryPair[0], directoryPair[1], os.path.join(directoryPath, directoryName), component)
-    
-    count = len(files) 
-    if(count != 0):
-      componentKey = "c" + str(self.componentCount)
+
+    count = len(files)
+    if (count != 0):
+      componentKey = f"c{str(self.componentCount)}"
       self.componentCount = self.componentCount + 1
       msiComponent = ComponentFiles(componentKey, files, parent);
-      print("adding msi component " + msiComponent.name + " with " + str(count) + " file(s)")
+      print(f"adding msi component {msiComponent.name} with {count} file(s)")
       component.append(msiComponent)
       
   def parseComponent(self, componentElement, rootPath):
@@ -176,29 +178,28 @@ class MSIPackage:
       directoryPair = self.addDirectory(directoryName, directoryPair[0], directoryPair[1])
     self.parseComponentTree(componentElement, directoryPair[0], directoryPair[1], rootPath, component)
     component.reverse()
-    print("component requires " + str(len(component)) + " msi component(s)")
+    print(f"component requires {len(component)} msi component(s)")
     return (component, shortcut, icon)
     
   def parseComponentXML(self, filename, rootPath):
     componentDocument = parse(filename)
-    print("parsing component file " + filename)
+    print(f"parsing component file {filename}")
     componentElement = componentDocument.documentElement
     return self.parseComponent(componentElement, rootPath)
     
   def componentForName(self, name, rootPath):
-    if(self.componentCache.has_key(name)):
+    if (self.componentCache.has_key(name)):
       return self.componentCache[name]
-    else:
-      component = self.parseComponentXML(name, rootPath)
-      self.componentCache[name] = component
-      return component
+    component = self.parseComponentXML(name, rootPath)
+    self.componentCache[name] = component
+    return component
     
   def parseFeature(self, featureElement, parent, index):
-    featureName = "ft" + str(self.featureCount)
+    featureName = f"ft{str(self.featureCount)}"
     self.featureCount = self.featureCount + 1
     title = featureElement.getAttribute("name")
     desc = featureElement.getAttribute("desc")
-    print("adding msi feature " + featureName + " title=" + title)
+    print(f"adding msi feature {featureName} title={title}")
     feature = Feature(featureName, parent, title, desc, index, 1, "TARGETDIR", 8)
     self.featureTable.append(feature)
     featureComponents = {}
@@ -213,32 +214,48 @@ class MSIPackage:
           raise Exception("feature \"" + title + "\" contains more than one reference to \"" + componentName + "\"")
         featureComponents[componentName] = ""
         componentSource = os.path.normpath(childElement.getAttribute("root"))
-        print("found component reference " + componentName)
+        print(f"found component reference {componentName}")
         componentPair = self.componentForName(componentName, componentSource)
         component = componentPair[0]
         for msiComponent in component:
-          print("adding msi featurecomponent " + featureName + " name=" + msiComponent.name)
+          print(f"adding msi featurecomponent {featureName} name={msiComponent.name}")
           self.featurecomponentsTable.append(FeatureComponent(featureName, msiComponent.name))
 
-          if(not self.componentTable.has_key(msiComponent.name)):
+          if (not self.componentTable.has_key(msiComponent.name)):
             keyPath = ""
             for fileTuple in msiComponent.files:
-              fileKey = "f" + str(self.fileCount)
+              fileKey = f"f{str(self.fileCount)}"
               self.fileCount = self.fileCount + 1
-              if(keyPath == ""):
+              if (keyPath == ""):
                 keyPath = fileKey
-                print("component " + msiComponent.name + " keypath=" + keyPath)
-              print("adding msi file " + fileKey + " name=" + fileTuple[0] + " size=" + str(fileTuple[1]))
-              self.fileTable.append(File(fileKey, msiComponent.name, fileKey + "|" + fileTuple[0], fileTuple[1], self.fileCount))
+                print(f"component {msiComponent.name} keypath={keyPath}")
+              print(
+                  f"adding msi file {fileKey} name={fileTuple[0]} size={str(fileTuple[1])}"
+              )
+              self.fileTable.append(
+                  File(
+                      fileKey,
+                      msiComponent.name,
+                      f"{fileKey}|{fileTuple[0]}",
+                      fileTuple[1],
+                      self.fileCount,
+                  ))
               self.cabList.append("\"" + fileTuple[2] + "\" " + fileKey + "\n")
             self.componentTable[msiComponent.name] = Component(msiComponent.name, keyPath, msiComponent.directory, 0)
-        
+
         shortcut = componentPair[1]
-        if(shortcut != ""):
-          shortcutName = "sc" + str(self.shortcutCount)
+        if (shortcut != ""):
+          shortcutName = f"sc{str(self.shortcutCount)}"
           self.shortcutCount = self.shortcutCount + 1
-          self.shortcutTable.append(Shortcut(shortcutName + "|" + shortcut, "ProductShortcutFolder", component[0].name, featureName, componentPair[2]))
-          print("adding msi shortcut " + shortcut)
+          self.shortcutTable.append(
+              Shortcut(
+                  f"{shortcutName}|{shortcut}",
+                  "ProductShortcutFolder",
+                  component[0].name,
+                  featureName,
+                  componentPair[2],
+              ))
+          print(f"adding msi shortcut {shortcut}")
 
   def parsePackage(self, packageElement):
     index = 2
@@ -264,7 +281,7 @@ class MSIPackage:
 
   def parsePackageXML(self, filename):
     document = parse(filename)
-    print("parsing package file " + filename)
+    print(f"parsing package file {filename}")
     self.parsePackage(document.documentElement)
     
   def createPackage(self, packageFile):
@@ -272,8 +289,10 @@ class MSIPackage:
     self.directoryTable.append(Directory("ProgramMenuFolder", "TARGETDIR", "."))
     self.directoryTable.append(Directory("SystemFolder", "TARGETDIR", "."))
     self.parsePackageXML(packageFile)
-    if(self.shortcutCount != 0):
-      self.directoryTable.append(Directory("ProductShortcutFolder", "ProgramMenuFolder", "s0|" + self.name))
+    if (self.shortcutCount != 0):
+      self.directoryTable.append(
+          Directory("ProductShortcutFolder", "ProgramMenuFolder",
+                    f"s0|{self.name}"))
   
   def writeFileTable(self, name):
     tableFile = file(name, "wt")
@@ -321,7 +340,8 @@ class MSIPackage:
     tableFile.write("FileKey\tComponent_\tFileName\tDirProperty\tInstallMode\ns72\ts72\tL255\ts72\ti2\nRemoveFile\tFileKey\n")
     count = 0
     for row in self.shortcutTable:
-      tableFile.write("rf" + str(count) + "\t" + row.component + "\t" + "" + "\t" + row.directory + "\t" + "2" + "\n")
+      tableFile.write(f"rf{str(count)}" + "\t" + row.component + "\t" + "" +
+                      "\t" + row.directory + "\t" + "2" + "\n")
       count = count + 1
       
   def writeCustomActionTable(self, name):
@@ -335,8 +355,8 @@ class MSIPackage:
     tableFile.write(format_guid(self.code) + "\t\t" + self.version + "\t1033\t1\t\tRELATEDPRODUCTS")
   
   def writeMSILicense(self, msiName, licenseName):
-    if(not os.path.exists(licenseName)):
-      raise Exception("file not found: " + licenseName)
+    if (not os.path.exists(licenseName)):
+      raise Exception(f"file not found: {licenseName}")
     print("license=\"" + licenseName + "\"")
     licenseFile = file(licenseName, "rt")
     text = licenseFile.read(1024)
@@ -350,13 +370,13 @@ class MSIPackage:
 
   def writeMSIProperties(self, msiName):
     msiDB = msi.Database(msiName)
-    print("ProductCode=" + format_guid(self.code))
+    print(f"ProductCode={format_guid(self.code)}")
     msiDB.setproperty("ProductCode", format_guid(self.code))
-    print("UpgradeCode=" + format_guid(self.code))
+    print(f"UpgradeCode={format_guid(self.code)}")
     msiDB.setproperty("UpgradeCode", format_guid(self.code))
-    print("ProductName=" + self.name)
+    print(f"ProductName={self.name}")
     msiDB.setproperty("ProductName", self.name)
-    print("ProductVersion=" + self.version)
+    print(f"ProductVersion={self.version}")
     msiDB.setproperty("ProductVersion", self.version)
     msiDB.setproperty("RELATEDPRODUCTS", "")
     msiDB.setproperty("SecureCustomProperties", "RELATEDPRODUCTS")
@@ -364,42 +384,48 @@ class MSIPackage:
 
   def writeMSI(self, msiTemplate, msiName):
     msiWorkName = "working.msi"
-    if(os.system("copy " + msiTemplate + " " + msiWorkName) != 0):
+    if os.system(f"copy {msiTemplate} {msiWorkName}") != 0:
       raise Exception("copy failed")
-    os.system("msiinfo " + msiWorkName + " /w 2 /v " + generate_guid() + " /a \"Radiant Community\" /j \"" + self.name + "\" /o \"This installation database contains the logic and data needed to install " + self.name + "\"")
+    os.system(
+        f"msiinfo {msiWorkName} /w 2 /v {generate_guid()}" +
+        " /a \"Radiant Community\" /j \"" + self.name +
+        "\" /o \"This installation database contains the logic and data needed to install "
+        + self.name + "\"")
 
     self.writeMSIProperties(msiWorkName)
     self.writeMSILicense(msiWorkName, self.license)
-    
+
     self.writeFileTable("File.idt")
-    os.system("msidb -d " + msiWorkName + " -i -f \"" + cwd + "\" File.idt")
+    os.system(f"msidb -d {msiWorkName}" + " -i -f \"" + cwd + "\" File.idt")
     os.system("del File.idt")
     self.writeComponentTable("Component.idt")
-    os.system("msidb -d " + msiWorkName + " -i -f \"" + cwd + "\" Component.idt")
+    os.system(f"msidb -d {msiWorkName}" + " -i -f \"" + cwd + "\" Component.idt")
     os.system("del Component.idt")
     self.writeFeatureComponentsTable("FeatureComponents.idt")
-    os.system("msidb -d " + msiWorkName + " -i -f \"" + cwd + "\" FeatureComponents.idt")
+    os.system(f"msidb -d {msiWorkName}" + " -i -f \"" + cwd +
+              "\" FeatureComponents.idt")
     os.system("del FeatureComponents.idt")
     self.writeDirectoryTable("Directory.idt")
-    os.system("msidb -d " + msiWorkName + " -i -f \"" + cwd + "\" Directory.idt")
+    os.system(f"msidb -d {msiWorkName}" + " -i -f \"" + cwd + "\" Directory.idt")
     os.system("del Directory.idt")
     self.writeFeatureTable("Feature.idt")
-    os.system("msidb -d " + msiWorkName + " -i -f \"" + cwd + "\" Feature.idt")
+    os.system(f"msidb -d {msiWorkName}" + " -i -f \"" + cwd + "\" Feature.idt")
     os.system("del Feature.idt")
     self.writeMediaTable("Media.idt")
-    os.system("msidb -d " + msiWorkName + " -i -f \"" + cwd + "\" Media.idt")
+    os.system(f"msidb -d {msiWorkName}" + " -i -f \"" + cwd + "\" Media.idt")
     os.system("del Media.idt")
     self.writeShortcutTable("Shortcut.idt")
-    os.system("msidb -d " + msiWorkName + " -i -f \"" + cwd + "\" Shortcut.idt")
+    os.system(f"msidb -d {msiWorkName}" + " -i -f \"" + cwd + "\" Shortcut.idt")
     os.system("del Shortcut.idt")
     self.writeRemoveFileTable("RemoveFile.idt")
-    os.system("msidb -d " + msiWorkName + " -i -f \"" + cwd + "\" RemoveFile.idt")
+    os.system(f"msidb -d {msiWorkName}" + " -i -f \"" + cwd + "\" RemoveFile.idt")
     os.system("del RemoveFile.idt")
     self.writeCustomActionTable("CustomAction.idt")
-    os.system("msidb -d " + msiWorkName + " -i -f \"" + cwd + "\" CustomAction.idt")
+    os.system(f"msidb -d {msiWorkName}" + " -i -f \"" + cwd +
+              "\" CustomAction.idt")
     os.system("del CustomAction.idt")
     self.writeUpgradeTable("Upgrade.idt")
-    os.system("msidb -d " + msiWorkName + " -i -f \"" + cwd + "\" Upgrade.idt")
+    os.system(f"msidb -d {msiWorkName}" + " -i -f \"" + cwd + "\" Upgrade.idt")
     os.system("del Upgrade.idt")
 
     cabText = file("archive_files.txt", "wt")
@@ -409,22 +435,23 @@ class MSIPackage:
     if(os.system("cabarc -m LZX:21 n archive.cab @archive_files.txt") != 0):
       raise Exception("cabarc returned error")
     os.system("del archive_files.txt")
-    os.system("msidb -d " + msiWorkName + " -a archive.cab")
+    os.system(f"msidb -d {msiWorkName} -a archive.cab")
     os.system("del archive.cab")
-    
+
     print("running standard MSI validators ...")
-    if(os.system("msival2 " + msiWorkName + " darice.cub > darice.txt") != 0):
+    if os.system(f"msival2 {msiWorkName} darice.cub > darice.txt") != 0:
       raise Exception("MSI VALIDATION ERROR: see darice.txt")
     print("running Logo Program validators ...")
-    if(os.system("msival2 " + msiWorkName + " logo.cub > logo.txt") != 0):
+    if os.system(f"msival2 {msiWorkName} logo.cub > logo.txt") != 0:
       raise Exception("MSI VALIDATION ERROR: see logo.txt")
     print("running XP Logo Program validators ...")
-    if(os.system("msival2 " + msiWorkName + " XPlogo.cub > XPlogo.txt") != 0):
+    if os.system(f"msival2 {msiWorkName} XPlogo.cub > XPlogo.txt") != 0:
       raise Exception("MSI VALIDATION ERROR: see XPlogo.txt")
-    
+
     msiNameQuoted = "\"" + msiName + "\""
-    if(os.path.exists(os.path.join(".\\", msiName)) and os.system("del " + msiNameQuoted) != 0):
+    if (os.path.exists(os.path.join(".\\", msiName))
+        and os.system(f"del {msiNameQuoted}") != 0):
       raise Exception("failed to delete old target")
-    if(os.system("rename " + msiWorkName + " " + msiNameQuoted) != 0):
+    if os.system(f"rename {msiWorkName} {msiNameQuoted}") != 0:
       raise Exception("failed to rename new target")
     

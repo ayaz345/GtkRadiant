@@ -46,7 +46,7 @@ def copyFileIfExists(source, target):
     copyFile(source, target)
     
 def copySvn(source, target):
-  assertMessage(os.path.isdir(source), "failed to find directory: " + source)
+  assertMessage(os.path.isdir(source), f"failed to find directory: {source}")
   if not os.path.exists(target):
     os.mkdir(target)
   for name in os.listdir(source):
@@ -59,11 +59,11 @@ def copySvn(source, target):
       copyFile(absolute, absTarget)
       
 def copyGame(source, game, target):
-  assertMessage(os.path.isdir(source), "failed to find directory: " + source)
-  assertMessage(os.path.isdir(target), "failed to find directory: " + target)
+  assertMessage(os.path.isdir(source), f"failed to find directory: {source}")
+  assertMessage(os.path.isdir(target), f"failed to find directory: {target}")
   root = os.path.join(source, os.path.normpath(game[0]))
   if os.path.exists(root):
-    gamename = game[1] + ".game"
+    gamename = f"{game[1]}.game"
     copySvn(os.path.join(root, gamename), os.path.join(target, gamename))
     gamesDir = os.path.join(target, "games")
     if not os.path.exists(gamesDir):
