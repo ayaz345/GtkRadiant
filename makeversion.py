@@ -42,11 +42,9 @@ import sys, re, string, os
 import svn
 
 def get_version():
-  # version
-  f = open('include/version.default', 'r')
-  buffer = f.read()
-  line = string.split(buffer, '\n')[0]
-  f.close()
+  with open('include/version.default', 'r') as f:
+    buffer = f.read()
+    line = string.split(buffer, '\n')[0]
   sys.stdout.write("version: %s\n" % line)
   exp = re.compile('^1\\.([^\\.]*)\\.([0-9]*)')
   (major, minor) = exp.findall(line)[0]
@@ -56,21 +54,17 @@ def get_version():
 # you can pass an optional message to append to aboutmsg
 def radiant_makeversion(append_about):
   (line, major, minor) = get_version()
-  f = open('include/version.h', 'w')
-  f.write('// generated header, see makeversion.py\n')
-  f.write('#define RADIANT_VERSION "%s"\n' % line)
-  f.write('#define RADIANT_MINOR_VERSION "%s"\n' % minor)
-  f.write('#define RADIANT_MAJOR_VERSION "%s"\n' % major)
-  f.close()
-  f = open('include/RADIANT_MINOR', 'w')
-  f.write(minor)
-  f.close()
-  f = open('include/RADIANT_MAJOR', 'w')
-  f.write(major)
-  f.close()
-  f = open('include/version', 'w')
-  f.write(line)
-  f.close()
+  with open('include/version.h', 'w') as f:
+    f.write('// generated header, see makeversion.py\n')
+    f.write('#define RADIANT_VERSION "%s"\n' % line)
+    f.write('#define RADIANT_MINOR_VERSION "%s"\n' % minor)
+    f.write('#define RADIANT_MAJOR_VERSION "%s"\n' % major)
+  with open('include/RADIANT_MINOR', 'w') as f:
+    f.write(minor)
+  with open('include/RADIANT_MAJOR', 'w') as f:
+    f.write(major)
+  with open('include/version', 'w') as f:
+    f.write(line)
   # aboutmsg
   aboutfile = 'include/aboutmsg.default'
   if ( os.environ.has_key('RADIANT_ABOUTMSG') ):
@@ -78,19 +72,17 @@ def radiant_makeversion(append_about):
   line = None
   if os.path.isfile(aboutfile):
     sys.stdout.write("about message is in %s\n" % aboutfile)
-    f = open(aboutfile, 'r')
-    line = f.readline()
-    f.close()
+    with open(aboutfile, 'r') as f:
+      line = f.readline()
   else:
-    line = "Custom build based on revision " + str(svn.getRevision(os.getcwd()))
+    line = f"Custom build based on revision {str(svn.getRevision(os.getcwd()))}"
   # optional additional message
-  if ( not append_about is None ):
+  if append_about is not None:
     line += append_about
   sys.stdout.write("about: %s\n" % line)
-  f = open('include/aboutmsg.h', 'w')
-  f.write('// generated header, see makeversion.py\n')
-  f.write('#define RADIANT_ABOUTMSG "%s"\n' % line)
-  f.close()
+  with open('include/aboutmsg.h', 'w') as f:
+    f.write('// generated header, see makeversion.py\n')
+    f.write('#define RADIANT_ABOUTMSG "%s"\n' % line)
 
 # can be used as module (scons build), or by direct call
 if __name__ == '__main__':

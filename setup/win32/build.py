@@ -23,7 +23,7 @@ def format_date_today():
   return str(datetime.date.today())
 
 package = MSIPackage("gtkradiant-1.5.0.xml")
-package.writeMSI("template.msi", "GtkRadiant-1.5.0-" + format_date_today() + ".msi")
+package.writeMSI("template.msi", f"GtkRadiant-1.5.0-{format_date_today()}.msi")
 
 #package = MSIPackage("q3a_example_maps.xml")
 #package.writeMSI("template.msi", "Q3A-Example-Maps-" + format_date_today() + ".msi")

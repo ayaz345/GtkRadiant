@@ -32,7 +32,7 @@ class View:
     
   def fetch(self):
     record = self.view.fetch()
-    if(record == None):
+    if record is None:
       raise Exception("no records available")
     return Record(record)
     
@@ -45,17 +45,17 @@ class Database:
 
   def commit(self):
     result = self.msiDB.commit()
-    if(result != 0):
-      raise Exception("msi commit failed: error " + str(result))
+    if (result != 0):
+      raise Exception(f"msi commit failed: error {str(result)}")
     
   def openview(self, query):
     view = self.msiDB.openview(query)
-    if(view == None):
+    if view is None:
       raise Exception("msi openview failed")
     return View(view);
 
   def setproperty(self, propertyName, propertyValue):
-    query = "UPDATE `Property` SET `Property`.`Value`='" + propertyValue + "' WHERE `Property`.`Property`='" + propertyName + "'" 
+    query = f"UPDATE `Property` SET `Property`.`Value`='{propertyValue}' WHERE `Property`.`Property`='{propertyName}'"
     self.openview(query)
 
   def setlicense(self, rtfString):
